@@ -195,6 +195,11 @@ body {
   animation: bounce 1.2s infinite ease-in-out;
 }
 
+.waking-text {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
 .dot:nth-child(2) {
   animation-delay: 0.15s;
 }

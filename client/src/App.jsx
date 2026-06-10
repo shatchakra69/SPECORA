@@ -13,6 +13,7 @@ function App() {
   ])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [wakingUp, setWakingUp] = useState(false)
   const bottomRef = useRef(null)
   const textareaRef = useRef(null)
 
@@ -38,15 +39,24 @@ function App() {
 
     const post = () => axios.post(API_URL, { messages: newMessages }, { timeout: 60000 })
 
+    // The free backend can be asleep or still warming up, which can return
+    // network errors or 502/503 a few times before it's ready. Retry a few
+    // times with increasing delays before giving up.
+    const retryDelays = [3000, 8000, 15000]
+
     try {
       let res
-      try {
-        res = await post()
-      } catch (err) {
-        // The free backend can be asleep and take ~30-60s to wake up,
-        // which often surfaces as a network/CORS error on the first try.
-        await new Promise((r) => setTimeout(r, 4000))
-        res = await post()
+      for (let attempt = 0; ; attempt++) {
+        try {
+          res = await post()
+          break
+        } catch (err) {
+          const status = err.response?.status
+          const retryable = !status || status === 502 || status === 503
+          if (!retryable || attempt >= retryDelays.length) throw err
+          if (attempt === 0) setWakingUp(true)
+          await new Promise((r) => setTimeout(r, retryDelays[attempt]))
+        }
       }
       const reply =
         res.data?.reply ?? res.data?.message ?? res.data?.content ?? ''
@@ -70,6 +80,7 @@ function App() {
       ])
     } finally {
       setLoading(false)
+      setWakingUp(false)
     }
   }
 
@@ -119,9 +130,17 @@ function App() {
               <div className="message-row message-row--ai">
                 <div className="avatar">BLC</div>
                 <div className="bubble bubble--ai bubble--loading">
-                  <span className="dot" />
-                  <span className="dot" />
-                  <span className="dot" />
+                  {wakingUp ? (
+                    <span className="waking-text">
+                      Waking up the server, this can take up to a minute...
+                    </span>
+                  ) : (
+                    <>
+                      <span className="dot" />
+                      <span className="dot" />
+                      <span className="dot" />
+                    </>
+                  )}
                 </div>
               </div>
             )}
