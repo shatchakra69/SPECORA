@@ -2,7 +2,7 @@
 
 A full-stack AI chat app powered by the Claude API. React + Vite frontend, Node.js/Express backend.
 
-**Status: ✅ Working** — live at https://client-rose-nu.vercel.app
+**Status: ✅ Working** — live at https://blc-chat.vercel.app
 (backend: https://blc-server-yp7x.onrender.com)
 
 > ⏳ **Note:** The backend runs on Render's free tier, which spins down after
