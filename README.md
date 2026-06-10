@@ -3,7 +3,12 @@
 A full-stack AI chat app powered by the Claude API. React + Vite frontend, Node.js/Express backend.
 
 **Status: ✅ Working** — live at https://client-rose-nu.vercel.app
-(backend: https://blc-server-production.up.railway.app)
+(backend: https://blc-server-yp7x.onrender.com)
+
+> ⏳ **Note:** The backend runs on Render's free tier, which spins down after
+> 15 minutes of inactivity. If the app has been idle, the **first message may
+> take ~30-60 seconds** to respond while the server wakes up. Subsequent
+> messages will be fast.
 
 ## Features
 
@@ -75,5 +80,5 @@ Open the printed URL (default `http://localhost:5173`).
 ## Security Notes
 
 - Never commit your `.env` file or API key.
-- The backend rate-limits `/api/chat` to 30 requests per 15 minutes per IP — adjust in `server/index.js` as needed.
+- The backend rate-limits `/api/chat` to 15 requests per 15 minutes per IP, and caps each conversation at 15 messages — adjust in `server/index.js` as needed.
 - Set a spending limit on your Anthropic account at [console.anthropic.com](https://console.anthropic.com/settings/billing).
