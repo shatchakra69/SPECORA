@@ -36,18 +36,35 @@ function App() {
     setInput('')
     setLoading(true)
 
+    const post = () => axios.post(API_URL, { messages: newMessages }, { timeout: 60000 })
+
     try {
-      const res = await axios.post(API_URL, { messages: newMessages })
+      let res
+      try {
+        res = await post()
+      } catch (err) {
+        // The free backend can be asleep and take ~30-60s to wake up,
+        // which often surfaces as a network/CORS error on the first try.
+        await new Promise((r) => setTimeout(r, 4000))
+        res = await post()
+      }
       const reply =
         res.data?.reply ?? res.data?.message ?? res.data?.content ?? ''
       setMessages((prev) => [...prev, { role: 'assistant', content: reply }])
     } catch (err) {
+      const status = err.response?.status
+      const serverMsg = err.response?.data?.error
+      const content =
+        status === 429
+          ? "You've hit the message limit. Please wait a bit and try again."
+          : status === 400 && serverMsg
+            ? serverMsg
+            : 'Something went wrong reaching the server. Please try again in a moment.'
       setMessages((prev) => [
         ...prev,
         {
           role: 'assistant',
-          content:
-            'Something went wrong reaching the server. Please check that the backend is running and try again.',
+          content,
           error: true,
         },
       ])
