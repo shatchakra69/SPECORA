@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 // Assistant replies type themselves out when fresh; restored history renders instantly.
 function useTypewriter(text, animate) {
@@ -43,7 +44,7 @@ export default function Message({ msg }) {
           <span className="user-text">{msg.content}</span>
         ) : (
           <div className="md">
-            <ReactMarkdown>{shown}</ReactMarkdown>
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{shown}</ReactMarkdown>
           </div>
         )}
       </div>

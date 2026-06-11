@@ -29,7 +29,7 @@ export default function ChatArea({ convo, onUpdate, onMenuOpen, onAuthExpired })
     if (attachments.length > 0) userMsg.attachments = attachments
 
     const history = [...messages, userMsg]
-    onUpdate({ ...convo, messages: history }, text)
+    onUpdate({ ...convo, messages: history })
     setLoading(true)
 
     // Older messages only carry attachment names (data isn't persisted), so

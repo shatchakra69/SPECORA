@@ -10,6 +10,7 @@ export default function App() {
   const [conversations, setConversations] = useState([])
   const [activeId, setActiveId] = useState(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [draft, setDraft] = useState(() => newConversation('chat'))
 
   useEffect(() => {
     if (!user) return
@@ -27,17 +28,19 @@ export default function App() {
     saveConversations(user.email, next)
   }
 
-  const active =
-    conversations.find((c) => c.id === activeId) ?? newConversation('chat')
+  const active = conversations.find((c) => c.id === activeId) ?? draft
 
-  const updateConvo = (updated, firstUserText) => {
+  const updateConvo = (updated) => {
     const exists = conversations.some((c) => c.id === updated.id)
+    // Derive the title from the first user message so a late update (e.g. the
+    // assistant reply landing with a stale convo object) can't undo it.
+    const firstUser = updated.messages.find((m) => m.role === 'user')
     const titled = {
       ...updated,
       updatedAt: Date.now(),
       title:
-        updated.title === 'New chat' && firstUserText
-          ? titleFrom(firstUserText)
+        updated.title === 'New chat' && firstUser
+          ? titleFrom(firstUser.content)
           : updated.title,
     }
     persist(
@@ -49,6 +52,7 @@ export default function App() {
   }
 
   const handleNewChat = () => {
+    setDraft(newConversation('chat'))
     setActiveId(null)
     setSidebarOpen(false)
   }
