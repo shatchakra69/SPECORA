@@ -33,8 +33,11 @@ export const signup = (email, password, onWake) =>
 export const login = (email, password, onWake) =>
   withRetry(() => api.post('/api/auth/login', { email, password }, { timeout: 30000 }), onWake)
 
-export const sendChat = (messages, mode, onWake) =>
-  withRetry(() => api.post('/api/chat', { messages, mode }, { timeout: 90000 }), onWake)
+export const sendChat = (messages, mode, userName, onWake) =>
+  withRetry(
+    () => api.post('/api/chat', { messages, mode, userName }, { timeout: 90000 }),
+    onWake,
+  )
 
 export const getSession = () => {
   const token = localStorage.getItem('blc_token')

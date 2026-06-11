@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { login, signup, storeSession } from '../api'
+import Logo from './Logo'
 
 export default function AuthScreen({ onAuthed }) {
   const [tab, setTab] = useState('login')
@@ -39,13 +40,12 @@ export default function AuthScreen({ onAuthed }) {
     <div className="auth">
       <div className="orb orb--1" />
       <div className="orb orb--2" />
-      <div className="orb orb--3" />
 
       <div className={`auth-card glass ${shake ? 'shake' : ''}`}>
         <div className="auth-brand">
-          <span className="logo-mark logo-mark--lg">B</span>
-          <h1 className="brand-gradient">BLC</h1>
-          <p className="auth-tagline">Be Like Chakri · Your AI for everything</p>
+          <Logo width={96} className="auth-wings" />
+          <h1 className="wordmark wordmark--auth">SPECORA</h1>
+          <p className="auth-tagline">Spec your AI, your way. Gain your aura.</p>
         </div>
 
         <div className="auth-tabs">
@@ -90,7 +90,7 @@ export default function AuthScreen({ onAuthed }) {
                 required
               />
               <button type="button" className="pw-toggle" onClick={() => setShowPw(!showPw)}>
-                {showPw ? '🙈' : '👁️'}
+                {showPw ? 'Hide' : 'Show'}
               </button>
             </div>
           </label>
@@ -114,7 +114,7 @@ export default function AuthScreen({ onAuthed }) {
       </div>
 
       <p className="auth-features">
-        💬 Chat · 📚 Homework · 🔍 Research · ✍️ Humanizer · 💻 Code · 🎨 Creative
+        Chat · Homework · Research · Humanizer · Code · Creative
       </p>
     </div>
   )

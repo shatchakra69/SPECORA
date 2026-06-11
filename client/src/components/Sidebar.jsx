@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { relativeTime } from '../storage'
 import { getMode } from '../modes'
+import Logo from './Logo'
 
 export default function Sidebar({
-  user, conversations, activeId, open,
-  onNewChat, onSelect, onDelete, onLogout, onClose,
+  user, profile, conversations, activeId, open,
+  onNewChat, onSelect, onDelete, onLogout, onClose, onSettings,
 }) {
   const [filter, setFilter] = useState('')
 
@@ -12,14 +13,17 @@ export default function Sidebar({
     .filter((c) => c.title.toLowerCase().includes(filter.toLowerCase()))
     .sort((a, b) => b.updatedAt - a.updatedAt)
 
+  const displayName = profile.preferredName || profile.firstName || user.email
+  const initial = displayName[0].toUpperCase()
+
   return (
     <>
       <div className={`sidebar-backdrop ${open ? 'show' : ''}`} onClick={onClose} />
       <aside className={`sidebar glass ${open ? 'open' : ''}`}>
         <div className="sidebar-head">
           <div className="logo">
-            <span className="logo-mark">B</span>
-            <span className="logo-text brand-gradient">BLC</span>
+            <Logo width={40} className="logo-wings" />
+            <span className="wordmark wordmark--side">SPECORA</span>
           </div>
           <button className="icon-btn sidebar-close" onClick={onClose} aria-label="Close sidebar">✕</button>
         </div>
@@ -38,7 +42,7 @@ export default function Sidebar({
         <nav className="chat-list">
           {visible.length === 0 && (
             <p className="chat-list-empty">
-              {conversations.length === 0 ? 'No chats yet. Start one! ✨' : 'No matches.'}
+              {conversations.length === 0 ? 'No chats yet. Start one!' : 'No matches.'}
             </p>
           )}
           {visible.map((c) => (
@@ -64,10 +68,15 @@ export default function Sidebar({
         </nav>
 
         <div className="sidebar-foot">
-          <div className="user-chip">
-            <span className="avatar-circle">{user.email[0].toUpperCase()}</span>
-            <span className="user-email" title={user.email}>{user.email}</span>
+          <div className="user-chip" onClick={onSettings} title="Open settings" role="button">
+            {profile.avatar ? (
+              <img src={profile.avatar} alt="" className="avatar-circle avatar-circle--img" />
+            ) : (
+              <span className="avatar-circle">{initial}</span>
+            )}
+            <span className="user-email" title={user.email}>{displayName}</span>
           </div>
+          <button className="icon-btn" title="Settings" onClick={onSettings}>⚙️</button>
           <button className="icon-btn" title="Log out" onClick={onLogout}>⎋</button>
         </div>
       </aside>

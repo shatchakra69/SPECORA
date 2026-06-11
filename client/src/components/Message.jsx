@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import Logo from './Logo'
 
 // Assistant replies type themselves out when fresh; restored history renders instantly.
 function useTypewriter(text, animate) {
@@ -23,13 +24,21 @@ function useTypewriter(text, animate) {
   return text.slice(0, len)
 }
 
-export default function Message({ msg }) {
+export default function Message({ msg, avatarSrc }) {
   const isUser = msg.role === 'user'
   const shown = useTypewriter(msg.content, !isUser && msg.fresh === true)
 
   return (
     <div className={`message-row ${isUser ? 'message-row--user' : 'message-row--ai'}`}>
-      <div className="avatar">{isUser ? 'You' : 'B'}</div>
+      {isUser ? (
+        avatarSrc ? (
+          <img src={avatarSrc} alt="" className="avatar avatar--img" />
+        ) : (
+          <div className="avatar">You</div>
+        )
+      ) : (
+        <div className="avatar avatar--ai"><Logo width={20} /></div>
+      )}
       <div className={`bubble ${isUser ? 'bubble--user' : 'bubble--ai'} ${msg.error ? 'bubble--error' : ''}`}>
         {msg.attachments?.length > 0 && (
           <div className="bubble-attachments">

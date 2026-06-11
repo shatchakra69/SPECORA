@@ -114,7 +114,7 @@ export default function Composer({ onSend, disabled, limitReached }) {
     <footer className="composer">
       {limitReached && (
         <div className="limit-banner">
-          This chat reached its 15-message limit. Start a new chat to keep going ✨
+          This chat reached its 15-message limit. Start a new chat to keep going.
         </div>
       )}
 
@@ -171,7 +171,7 @@ export default function Composer({ onSend, disabled, limitReached }) {
           <textarea
             ref={taRef}
             className="composer-input"
-            placeholder={limitReached ? 'Start a new chat to continue…' : 'Message BLC…  (paste screenshots right here)'}
+            placeholder={limitReached ? 'Start a new chat to continue…' : 'Message SPECORA…  (paste screenshots right here)'}
             value={input}
             rows={1}
             onChange={(e) => setInput(e.target.value)}
@@ -192,7 +192,7 @@ export default function Composer({ onSend, disabled, limitReached }) {
           </button>
         </div>
       </div>
-      <p className="footer-note">BLC can make mistakes. Verify important information.</p>
+      <p className="footer-note">SPECORA can make mistakes. Verify important information.</p>
     </footer>
   )
 }

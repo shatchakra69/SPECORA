@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { sendChat } from '../api'
 import { MODES, getMode } from '../modes'
+import Logo from './Logo'
 import Message from './Message'
 import Composer from './Composer'
 
 const MAX_MESSAGES = 15
 
-export default function ChatArea({ convo, onUpdate, onMenuOpen, onAuthExpired }) {
+export default function ChatArea({ convo, profile, onUpdate, onMenuOpen, onAuthExpired }) {
   const [loading, setLoading] = useState(false)
   const [waking, setWaking] = useState(false)
   const bottomRef = useRef(null)
@@ -15,6 +16,7 @@ export default function ChatArea({ convo, onUpdate, onMenuOpen, onAuthExpired })
   const mode = getMode(convo?.mode)
   const isFresh = messages.length === 0
   const limitReached = messages.length >= MAX_MESSAGES
+  const callName = profile.preferredName || profile.firstName || ''
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -44,7 +46,7 @@ export default function ChatArea({ convo, onUpdate, onMenuOpen, onAuthExpired })
     }))
 
     try {
-      const res = await sendChat(payload, mode.id, () => setWaking(true))
+      const res = await sendChat(payload, mode.id, callName, () => setWaking(true))
       const reply = res.data?.reply ?? ''
       onUpdate({
         ...convo,
@@ -84,13 +86,12 @@ export default function ChatArea({ convo, onUpdate, onMenuOpen, onAuthExpired })
       <div className="chat-scroll">
         {isFresh ? (
           <div className="welcome">
-            <div className="welcome-logo">
-              <span className="logo-mark logo-mark--xl">B</span>
-            </div>
-            <h1 className="welcome-title">
-              Hey! I'm <span className="brand-gradient">BLC</span> ✨
-            </h1>
-            <p className="welcome-sub">Pick a mode and ask me anything.</p>
+            <Logo width={200} className="welcome-wings" />
+            <h1 className="wordmark wordmark--hero">SPECORA</h1>
+            <p className="welcome-sub">
+              Spec your AI, your way. <strong>Gain your aura.</strong>
+            </p>
+            {callName && <p className="welcome-greet">Good to see you, {callName}.</p>}
 
             <div className="mode-pills">
               {MODES.map((m) => (
@@ -122,12 +123,12 @@ export default function ChatArea({ convo, onUpdate, onMenuOpen, onAuthExpired })
         ) : (
           <div className="chat-inner">
             {messages.map((msg, idx) => (
-              <Message key={idx} msg={msg} />
+              <Message key={idx} msg={msg} avatarSrc={profile.avatar} />
             ))}
 
             {loading && (
               <div className="message-row message-row--ai">
-                <div className="avatar">B</div>
+                <div className="avatar avatar--ai"><Logo width={20} /></div>
                 <div className="bubble bubble--ai bubble--loading">
                   {waking ? (
                     <span className="waking-text">

@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
 import { getSession, clearSession } from './api'
-import { loadConversations, saveConversations, newConversation, titleFrom } from './storage'
+import {
+  loadConversations, saveConversations, newConversation, titleFrom,
+  loadProfile, saveProfile,
+} from './storage'
 import AuthScreen from './components/AuthScreen'
 import Sidebar from './components/Sidebar'
 import ChatArea from './components/ChatArea'
+import SettingsModal from './components/SettingsModal'
 
 export default function App() {
   const [user, setUser] = useState(() => getSession())
@@ -11,11 +15,13 @@ export default function App() {
   const [activeId, setActiveId] = useState(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [draft, setDraft] = useState(() => newConversation('chat'))
+  const [profile, setProfile] = useState({})
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
   useEffect(() => {
     if (!user) return
-    const stored = loadConversations(user.email)
-    setConversations(stored)
+    setConversations(loadConversations(user.email))
+    setProfile(loadProfile(user.email))
     setActiveId(null)
   }, [user?.email])
 
@@ -67,10 +73,16 @@ export default function App() {
     if (id === activeId) setActiveId(null)
   }
 
+  const handleSaveProfile = (next) => {
+    setProfile(next)
+    saveProfile(user.email, next)
+  }
+
   const handleLogout = () => {
     clearSession()
     setUser(null)
     setConversations([])
+    setProfile({})
     setActiveId(null)
   }
 
@@ -78,6 +90,7 @@ export default function App() {
     <div className="app">
       <Sidebar
         user={user}
+        profile={profile}
         conversations={conversations}
         activeId={activeId}
         open={sidebarOpen}
@@ -86,14 +99,24 @@ export default function App() {
         onDelete={handleDelete}
         onLogout={handleLogout}
         onClose={() => setSidebarOpen(false)}
+        onSettings={() => setSettingsOpen(true)}
       />
       <ChatArea
         key={active.id}
         convo={active}
+        profile={profile}
         onUpdate={updateConvo}
         onMenuOpen={() => setSidebarOpen(true)}
         onAuthExpired={handleLogout}
       />
+      {settingsOpen && (
+        <SettingsModal
+          user={user}
+          profile={profile}
+          onSave={handleSaveProfile}
+          onClose={() => setSettingsOpen(false)}
+        />
+      )}
     </div>
   )
 }

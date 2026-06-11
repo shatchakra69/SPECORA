@@ -1,45 +1,47 @@
-# BLC — Be Like Chakri
+# SPECORA
 
-A full-stack AI chat app powered by the Claude API. React + Vite frontend, Node.js/Express backend.
+**Spec your AI, your way. Gain your aura.**
 
-**Status: ✅ Working** — live at https://blc-ai.vercel.app
-(backend: https://blc-server-yp7x.onrender.com)
+SPECORA is a full-stack AI chat platform with multiple personality modes, accounts, chat history and file understanding. React + Vite frontend, Node.js/Express backend.
 
-> ⏳ **Note:** The backend runs on Render's free tier, which spins down after
+**Status: ✅ Live** — try it at **https://specora-ai.vercel.app**
+
+> ⏳ **Note:** The backend runs on a free hosting tier that spins down after
 > 15 minutes of inactivity. If the app has been idle, the **first message (or
-> login) may take ~30-60 seconds** while the server wakes up. Subsequent
-> messages will be fast.
+> login) may take ~30-60 seconds** while the server wakes up. Everything after
+> that is fast.
 
 ## Features
 
-- ✨ Modern animated UI: gradient glassmorphism design, smooth message animations, typewriter replies
-- 🔐 Email login / sign-up — only registered users can chat, so a bare link can't burn API credits
-- 🗂️ Chat history sidebar with search, per-account, saved in your browser
-- 🧠 Six modes: 💬 Chat, 📚 Homework, 🔍 Research, ✍️ Humanizer, 💻 Code, 🎨 Creative
-- 📎 Attach images, screenshots and PDFs (paste screenshots straight into the input)
-- 😊 Emoji picker
-- 🧍 Humanized responses: natural tone enforced by the system prompt, plus a server-side filter that removes em dashes and double hyphens
-- 📝 Markdown rendering (code blocks, lists, tables) in AI replies
-- 📱 Fully mobile responsive
-- 🚦 Rate-limited backend (per-user) with input validation
+- **Modern animated UI** — monochrome glassmorphism design, smooth message animations, typewriter replies
+- **Email login / sign-up** — only registered users can chat, so a bare link can't burn API credits
+- **Settings & profile** — profile photo, preferred name (SPECORA addresses you by it), contact details, all editable
+- **Chat history sidebar** — searchable, per-account, saved in your browser
+- **Six modes** — 💬 Chat, 📚 Homework, 🔍 Research, ✍️ Humanizer, 💻 Code, 🎨 Creative
+- **File understanding** — attach images, screenshots and PDFs (or paste screenshots straight into the input)
+- **Emoji picker**
+- **Humanized responses** — natural tone with **no em dashes or robotic phrasing**, enforced server-side
+- **Markdown rendering** — code blocks, lists and tables in replies
+- **Fully mobile responsive**
+- **Per-user rate limiting** with input validation
 
 > **Note on accounts:** users are stored on the server's disk, which is
-> ephemeral on Render's free tier, so accounts reset when the service
-> restarts/redeploys. Logged-in sessions (30-day tokens) keep working across
+> ephemeral on the free hosting tier, so accounts reset when the service
+> restarts or redeploys. Logged-in sessions (30-day tokens) keep working across
 > resets. For permanent accounts, plug in a free Postgres (e.g. Supabase).
 
 ## Tech Stack
 
 - **Frontend:** React, Vite, Axios
-- **Backend:** Node.js, Express, Anthropic SDK
+- **Backend:** Node.js, Express
 - **Deployment:** Vercel (frontend) + Render (backend)
 
 ## Project Structure
 
 ```
-BLC/
+SPECORA/
 ├── client/   # React frontend (Vite)
-└── server/   # Express backend (Anthropic API proxy)
+└── server/   # Express backend (AI engine proxy, auth, rate limiting)
 ```
 
 ## Local Development
@@ -48,7 +50,7 @@ BLC/
 
 ```bash
 cd server
-cp .env.example .env   # add your ANTHROPIC_API_KEY
+cp .env.example .env   # add your AI_API_KEY and a random JWT_SECRET
 npm install
 npm run dev
 ```
@@ -70,26 +72,27 @@ Open the printed URL (default `http://localhost:5173`).
 1. Push this repo to GitHub.
 2. On [Render](https://render.com), create a new **Web Service** from this repo, root directory `server`.
 3. Set environment variables:
-   - `ANTHROPIC_API_KEY` — your Anthropic API key
-   - `CORS_ORIGIN` — your frontend domain, e.g. `https://ai.blc.com`
+   - `AI_API_KEY` — your AI provider API key
    - `JWT_SECRET` — a long random string used to sign login tokens (`openssl rand -hex 32`)
-4. Deploy. Note the service URL (e.g. `https://blc-server.onrender.com`).
+   - `CORS_ORIGIN` — your frontend domain(s), comma separated
+4. Deploy and note the service URL.
 
 ### Frontend (Vercel)
 
 1. On [Vercel](https://vercel.com), import this repo, set root directory to `client`.
 2. Set environment variable:
-   - `VITE_API_URL` — your backend URL from above (e.g. `https://blc-server.onrender.com`)
+   - `VITE_API_URL` — your backend URL from above
 3. Deploy.
 
-### Custom Domain (ai.blc)
+### Custom Domain
 
-1. In Vercel, go to your project → **Settings → Domains** and add `ai.blc.com` (or your chosen subdomain).
+1. In Vercel, go to your project → **Settings → Domains** and add your domain.
 2. At your domain registrar, add the DNS records Vercel shows you (usually a `CNAME` record pointing to `cname.vercel-dns.com`).
-3. Optionally set up a subdomain like `api.ai.blc.com` for the backend on Render the same way.
+3. Add the new domain to the backend's `CORS_ORIGIN` env var.
 
 ## Security Notes
 
-- Never commit your `.env` file or API key.
-- The backend rate-limits `/api/chat` to 15 requests per 15 minutes per IP, and caps each conversation at 15 messages — adjust in `server/index.js` as needed.
-- Set a spending limit on your Anthropic account at [console.anthropic.com](https://console.anthropic.com/settings/billing).
+- Never commit your `.env` file or API keys.
+- `/api/chat` requires a logged-in user and is rate-limited to 15 requests per 15 minutes per user, with a 15-message cap per conversation — adjust in `server/index.js`.
+- Passwords are hashed with scrypt; sessions use signed 30-day tokens.
+- Set a spending limit in your AI provider's billing dashboard.

@@ -18,7 +18,7 @@ app.use(cors({ origin: allowedOrigins }))
 app.use(express.json({ limit: '25mb' }))
 
 const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
+  apiKey: process.env.AI_API_KEY || process.env.ANTHROPIC_API_KEY,
 })
 
 const JWT_SECRET = process.env.JWT_SECRET || 'blc-dev-secret-change-me'
@@ -126,16 +126,17 @@ const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
 const STYLE_RULES = `STYLE RULES (always follow, top priority):
 Write like a thoughtful human, not an AI. Use contractions and a warm, natural voice with varied sentence lengths.
 NEVER use em dashes (—), en dashes (–), or double hyphens (--) anywhere. Use commas, periods, colons, or parentheses instead.
+Use **bold** to stress the most important words, key terms, and takeaways, and use bold headings for longer answers.
 Don't open with filler like "Great question!" or "Certainly!". Skip robotic transitions like "Furthermore" or "Moreover".
 Use markdown only when it genuinely helps (lists, code blocks, headings for long answers). An occasional emoji is fine when it fits, never more than one or two.`
 
 const MODES = {
-  chat: `You are BLC (Be Like Chakri), a sharp, friendly AI assistant. Be genuinely helpful and concise by default, going deeper when asked.`,
-  homework: `You are BLC in Homework mode, a patient tutor. Explain concepts step by step, show the working before the final answer, and make sure the student actually understands rather than just copying. Use simple language and small examples.`,
-  research: `You are BLC in Research mode. Give structured, thorough answers: key takeaways first, then details in clear sections. Be honest about uncertainty and point out what's worth double-checking.`,
-  humanizer: `You are BLC in Humanizer mode. The user gives you text (often AI-sounding) and you rewrite it so it reads like a real person wrote it: varied sentence lengths, natural flow, simple words, no clichés, no robotic transitions, no buzzwords. Keep the meaning, change the voice. Return only the rewritten text unless asked otherwise.`,
-  code: `You are BLC in Code mode, a pragmatic senior engineer. Give working code with brief explanations, point out pitfalls, and prefer the simplest solution that works.`,
-  creative: `You are BLC in Creative mode, an imaginative writing partner for stories, captions, scripts, names, and brainstorms. Be vivid, specific, and original, never generic.`,
+  chat: `You are SPECORA, a sharp, friendly AI assistant. Be genuinely helpful and concise by default, going deeper when asked.`,
+  homework: `You are SPECORA in Homework mode, a patient tutor. Explain concepts step by step, show the working before the final answer, and make sure the student actually understands rather than just copying. Use simple language and small examples.`,
+  research: `You are SPECORA in Research mode. Give structured, thorough answers: key takeaways first, then details in clear sections. Be honest about uncertainty and point out what's worth double-checking.`,
+  humanizer: `You are SPECORA in Humanizer mode. The user gives you text (often AI-sounding) and you rewrite it so it reads like a real person wrote it: varied sentence lengths, natural flow, simple words, no clichés, no robotic transitions, no buzzwords. Keep the meaning, change the voice. Return only the rewritten text unless asked otherwise.`,
+  code: `You are SPECORA in Code mode, a pragmatic senior engineer. Give working code with brief explanations, point out pitfalls, and prefer the simplest solution that works.`,
+  creative: `You are SPECORA in Creative mode, an imaginative writing partner for stories, captions, scripts, names, and brainstorms. Be vivid, specific, and original, never generic.`,
 }
 
 // Strip any dash punctuation the model sneaks through. Keeps single hyphens
@@ -213,7 +214,15 @@ app.post('/api/chat', requireAuth, chatLimiter, async (req, res) => {
       }
     }
 
-    const system = `${MODES[mode] ?? MODES.chat}\n\n${STYLE_RULES}`
+    const userName =
+      typeof req.body.userName === 'string'
+        ? req.body.userName.replace(/[\r\n]/g, ' ').trim().slice(0, 40)
+        : ''
+
+    let system = `${MODES[mode] ?? MODES.chat}\n\n${STYLE_RULES}`
+    if (userName) {
+      system += `\n\nThe user's name is ${userName}. Address them by name when it feels natural, without overdoing it.`
+    }
 
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
@@ -232,9 +241,9 @@ app.post('/api/chat', requireAuth, chatLimiter, async (req, res) => {
     if (err.status === 429 || err.status === 529) {
       return res.status(503).json({ error: 'The AI is a bit busy right now. Try again in a moment.' })
     }
-    res.status(500).json({ error: 'Failed to get response from Claude' })
+    res.status(500).json({ error: 'The AI had trouble answering. Please try again.' })
   }
 })
 
 const PORT = process.env.PORT || 5000
-app.listen(PORT, () => console.log(`BLC server running on port ${PORT}`))
+app.listen(PORT, () => console.log(`SPECORA server running on port ${PORT}`))
