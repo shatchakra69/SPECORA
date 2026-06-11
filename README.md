@@ -6,17 +6,27 @@ A full-stack AI chat app powered by the Claude API. React + Vite frontend, Node.
 (backend: https://blc-server-yp7x.onrender.com)
 
 > ⏳ **Note:** The backend runs on Render's free tier, which spins down after
-> 15 minutes of inactivity. If the app has been idle, the **first message may
-> take ~30-60 seconds** to respond while the server wakes up. Subsequent
+> 15 minutes of inactivity. If the app has been idle, the **first message (or
+> login) may take ~30-60 seconds** while the server wakes up. Subsequent
 > messages will be fast.
 
 ## Features
 
-- Clean, dark, ChatGPT-style chat UI
-- Full conversation history maintained in-session
-- Loading indicator while waiting for a response
-- Mobile responsive
-- Rate-limited backend with input validation
+- ✨ Modern animated UI: gradient glassmorphism design, smooth message animations, typewriter replies
+- 🔐 Email login / sign-up — only registered users can chat, so a bare link can't burn API credits
+- 🗂️ Chat history sidebar with search, per-account, saved in your browser
+- 🧠 Six modes: 💬 Chat, 📚 Homework, 🔍 Research, ✍️ Humanizer, 💻 Code, 🎨 Creative
+- 📎 Attach images, screenshots and PDFs (paste screenshots straight into the input)
+- 😊 Emoji picker
+- 🧍 Humanized responses: natural tone enforced by the system prompt, plus a server-side filter that removes em dashes and double hyphens
+- 📝 Markdown rendering (code blocks, lists, tables) in AI replies
+- 📱 Fully mobile responsive
+- 🚦 Rate-limited backend (per-user) with input validation
+
+> **Note on accounts:** users are stored on the server's disk, which is
+> ephemeral on Render's free tier, so accounts reset when the service
+> restarts/redeploys. Logged-in sessions (30-day tokens) keep working across
+> resets. For permanent accounts, plug in a free Postgres (e.g. Supabase).
 
 ## Tech Stack
 
@@ -62,6 +72,7 @@ Open the printed URL (default `http://localhost:5173`).
 3. Set environment variables:
    - `ANTHROPIC_API_KEY` — your Anthropic API key
    - `CORS_ORIGIN` — your frontend domain, e.g. `https://ai.blc.com`
+   - `JWT_SECRET` — a long random string used to sign login tokens (`openssl rand -hex 32`)
 4. Deploy. Note the service URL (e.g. `https://blc-server.onrender.com`).
 
 ### Frontend (Vercel)
