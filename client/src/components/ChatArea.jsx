@@ -34,16 +34,29 @@ export default function ChatArea({ convo, profile, onUpdate, onMenuOpen, onAuthE
     onUpdate({ ...convo, messages: history })
     setLoading(true)
 
-    // Older messages only carry attachment names (data isn't persisted), so
-    // re-sending history is cheap; only this turn's files upload for real.
-    const payload = history.map((m) => ({
-      role: m.role,
-      content:
-        m.attachments?.some((a) => !a.data)
-          ? `${m.content}\n[attached earlier: ${m.attachments.map((a) => a.name).join(', ')}]`
-          : m.content,
-      ...(m.attachments?.some((a) => a.data) ? { attachments: m.attachments } : {}),
-    }))
+    // Attachments uploaded to Cloudinary persist as URLs, so the AI can keep
+    // seeing them on later turns. Pre-Cloudinary messages only kept the file
+    // name; mention those in the text instead.
+    const payload = history.map((m) => {
+      const sendable = (m.attachments ?? []).filter((a) => a.url || a.data)
+      const nameOnly = (m.attachments ?? []).filter((a) => !a.url && !a.data)
+      return {
+        role: m.role,
+        content:
+          nameOnly.length > 0
+            ? `${m.content}\n[attached earlier: ${nameOnly.map((a) => a.name).join(', ')}]`
+            : m.content,
+        ...(sendable.length > 0
+          ? {
+              attachments: sendable.map(({ name, media_type, url, data }) => ({
+                name,
+                media_type,
+                ...(url ? { url } : { data }),
+              })),
+            }
+          : {}),
+      }
+    })
 
     try {
       const res = await sendChat(payload, mode.id, callName, () => setWaking(true))

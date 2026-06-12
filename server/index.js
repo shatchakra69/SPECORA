@@ -1,11 +1,9 @@
 import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
-import rateLimit from 'express-rate-limit'
-import jwt from 'jsonwebtoken'
+import { rateLimit, ipKeyGenerator } from 'express-rate-limit'
 import Anthropic from '@anthropic-ai/sdk'
-import { scryptSync, randomBytes, timingSafeEqual } from 'node:crypto'
-import { readFileSync, writeFile } from 'node:fs'
+import { createHash } from 'node:crypto'
 
 const app = express()
 app.set('trust proxy', 1)
@@ -21,87 +19,104 @@ const anthropic = new Anthropic({
   apiKey: process.env.AI_API_KEY || process.env.ANTHROPIC_API_KEY,
 })
 
-const JWT_SECRET = process.env.JWT_SECRET || 'blc-dev-secret-change-me'
-
 // ---------------------------------------------------------------------------
-// Users
-// Note: the free hosting tier has an ephemeral disk, so users.json resets on
-// redeploys/restarts. Issued JWTs (30 days) keep working across resets because
-// only the signing secret is needed to verify them.
+// Auth (Supabase)
+// Accounts live in Supabase (email/password + Google). The client sends the
+// Supabase access token; we validate it against the Supabase Auth API and
+// cache the result briefly so chat requests don't pay a lookup every time.
 // ---------------------------------------------------------------------------
-const USERS_FILE = new URL('./users.json', import.meta.url)
-let users = {}
-try {
-  users = JSON.parse(readFileSync(USERS_FILE, 'utf8'))
-} catch {
-  users = {}
+const SUPABASE_URL = process.env.SUPABASE_URL
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY
+
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  console.warn('SUPABASE_URL / SUPABASE_ANON_KEY not set: all requests will be rejected.')
 }
 
-const saveUsers = () => {
-  writeFile(USERS_FILE, JSON.stringify(users), (err) => {
-    if (err) console.error('Failed to persist users:', err.message)
-  })
-}
+const TOKEN_CACHE_TTL = 60 * 1000
+const tokenCache = new Map() // access token -> { email, expires }
 
-const hashPassword = (password) => {
-  const salt = randomBytes(16).toString('hex')
-  const hash = scryptSync(password, salt, 64).toString('hex')
-  return `${salt}:${hash}`
-}
-
-const verifyPassword = (password, stored) => {
-  const [salt, hash] = stored.split(':')
-  const hashBuf = Buffer.from(hash, 'hex')
-  const testBuf = scryptSync(password, salt, 64)
-  return hashBuf.length === testBuf.length && timingSafeEqual(hashBuf, testBuf)
-}
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-
-const issueToken = (email) =>
-  jwt.sign({ email }, JWT_SECRET, { expiresIn: '30d' })
-
-app.post('/api/auth/signup', (req, res) => {
-  const email = String(req.body?.email ?? '').trim().toLowerCase()
-  const password = String(req.body?.password ?? '')
-
-  if (!EMAIL_RE.test(email)) {
-    return res.status(400).json({ error: 'Please enter a valid email address.' })
-  }
-  if (password.length < 6) {
-    return res.status(400).json({ error: 'Password must be at least 6 characters.' })
-  }
-  if (users[email]) {
-    return res.status(409).json({ error: 'An account with this email already exists. Try logging in.' })
-  }
-
-  users[email] = { passwordHash: hashPassword(password), createdAt: Date.now() }
-  saveUsers()
-  res.json({ token: issueToken(email), email })
-})
-
-app.post('/api/auth/login', (req, res) => {
-  const email = String(req.body?.email ?? '').trim().toLowerCase()
-  const password = String(req.body?.password ?? '')
-
-  const user = users[email]
-  if (!user || !verifyPassword(password, user.passwordHash)) {
-    return res.status(401).json({ error: 'Wrong email or password.' })
-  }
-  res.json({ token: issueToken(email), email })
-})
-
-const requireAuth = (req, res, next) => {
+const requireAuth = async (req, res, next) => {
   const header = req.headers.authorization || ''
   const token = header.startsWith('Bearer ') ? header.slice(7) : null
   if (!token) {
     return res.status(401).json({ error: 'Please log in to chat.' })
   }
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    return res.status(503).json({ error: 'Auth is not configured on the server.' })
+  }
+
+  const cached = tokenCache.get(token)
+  if (cached && cached.expires > Date.now()) {
+    req.user = { email: cached.email }
+    return next()
+  }
+
   try {
-    req.user = jwt.verify(token, JWT_SECRET)
+    const resp = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${token}` },
+    })
+    if (!resp.ok) {
+      return res.status(401).json({ error: 'Your session expired. Please log in again.' })
+    }
+    const user = await resp.json()
+    if (!user?.email) {
+      return res.status(401).json({ error: 'Your session expired. Please log in again.' })
+    }
+    if (tokenCache.size > 1000) {
+      tokenCache.delete(tokenCache.keys().next().value)
+    }
+    tokenCache.set(token, { email: user.email, expires: Date.now() + TOKEN_CACHE_TTL })
+    req.user = { email: user.email }
     next()
+  } catch (err) {
+    console.error('Auth check failed:', err.message)
+    res.status(503).json({ error: 'Could not verify your session. Please try again.' })
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Uploads (Cloudinary)
+// The client uploads files directly to Cloudinary so large attachments never
+// transit this server. We only hand out a short-lived signature; the API
+// secret stays here.
+// ---------------------------------------------------------------------------
+const CLOUDINARY = {
+  cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+  apiKey: process.env.CLOUDINARY_API_KEY,
+  apiSecret: process.env.CLOUDINARY_API_SECRET,
+}
+const UPLOAD_FOLDER = 'specora'
+
+app.post('/api/uploads/sign', requireAuth, (req, res) => {
+  if (!CLOUDINARY.cloudName || !CLOUDINARY.apiKey || !CLOUDINARY.apiSecret) {
+    return res.status(503).json({ error: 'File uploads are not configured on the server.' })
+  }
+  const timestamp = Math.floor(Date.now() / 1000)
+  // Cloudinary signature: sha1 of the alphabetically sorted params + secret.
+  const signature = createHash('sha1')
+    .update(`folder=${UPLOAD_FOLDER}&timestamp=${timestamp}${CLOUDINARY.apiSecret}`)
+    .digest('hex')
+  res.json({
+    cloudName: CLOUDINARY.cloudName,
+    apiKey: CLOUDINARY.apiKey,
+    folder: UPLOAD_FOLDER,
+    timestamp,
+    signature,
+  })
+})
+
+// Only fetch attachments from our own Cloudinary account, never arbitrary URLs.
+const isCloudinaryUrl = (value) => {
+  if (!CLOUDINARY.cloudName) return false
+  try {
+    const url = new URL(value)
+    return (
+      url.protocol === 'https:' &&
+      url.hostname === 'res.cloudinary.com' &&
+      url.pathname.startsWith(`/${CLOUDINARY.cloudName}/`)
+    )
   } catch {
-    return res.status(401).json({ error: 'Your session expired. Please log in again.' })
+    return false
   }
 }
 
@@ -113,7 +128,7 @@ const chatLimiter = rateLimit({
   max: 15,
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req) => req.user?.email || req.ip,
+  keyGenerator: (req) => req.user?.email || ipKeyGenerator(req.ip),
   message: { error: 'Too many requests. Please try again later.' },
 })
 
@@ -151,18 +166,16 @@ const humanizeReply = (text) =>
 const buildContent = (msg) => {
   const blocks = []
   for (const att of msg.attachments ?? []) {
-    if (!att?.data) continue
-    if (att.media_type === 'application/pdf') {
-      blocks.push({
-        type: 'document',
-        source: { type: 'base64', media_type: 'application/pdf', data: att.data },
-      })
-    } else if (IMAGE_TYPES.includes(att.media_type)) {
-      blocks.push({
-        type: 'image',
-        source: { type: 'base64', media_type: att.media_type, data: att.data },
-      })
-    }
+    const isPdf = att?.media_type === 'application/pdf'
+    const isImage = IMAGE_TYPES.includes(att?.media_type)
+    if (!isPdf && !isImage) continue
+    const source = att.url
+      ? { type: 'url', url: att.url }
+      : att.data
+        ? { type: 'base64', media_type: att.media_type, data: att.data }
+        : null
+    if (!source) continue
+    blocks.push(isPdf ? { type: 'document', source } : { type: 'image', source })
   }
   const text = (msg.content || '').trim() || 'See the attached file.'
   if (blocks.length === 0) return text
@@ -201,13 +214,16 @@ app.post('/api/chat', requireAuth, chatLimiter, async (req, res) => {
           return res.status(400).json({ error: 'Too many attachments (max 3 per message).' })
         }
         for (const att of msg.attachments) {
-          if (!att?.data) continue
+          if (!att?.url && !att?.data) continue
           const validType =
             att.media_type === 'application/pdf' || IMAGE_TYPES.includes(att.media_type)
           if (!validType) {
             return res.status(400).json({ error: 'Only images and PDF files are supported.' })
           }
-          if (att.data.length * 0.75 > MAX_ATTACHMENT_BYTES) {
+          if (att.url && !isCloudinaryUrl(att.url)) {
+            return res.status(400).json({ error: 'Invalid attachment URL.' })
+          }
+          if (att.data && att.data.length * 0.75 > MAX_ATTACHMENT_BYTES) {
             return res.status(400).json({ error: 'Attachments must be under 4 MB each.' })
           }
         }

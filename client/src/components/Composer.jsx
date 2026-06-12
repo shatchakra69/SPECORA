@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { uploadAttachment } from '../api'
 
 const EMOJIS = [
   '😀','😂','🥹','😊','😍','😎','🤩','😅','🙃','🤔','🤯','😴',
@@ -8,11 +9,12 @@ const EMOJIS = [
 ]
 
 const MAX_FILES = 3
-const MAX_BYTES = 4 * 1024 * 1024
+const MAX_BYTES = 10 * 1024 * 1024
 
 export default function Composer({ onSend, disabled, limitReached }) {
   const [input, setInput] = useState('')
   const [files, setFiles] = useState([])
+  const [uploading, setUploading] = useState(false)
   const [showEmoji, setShowEmoji] = useState(false)
   const [fileError, setFileError] = useState('')
   const taRef = useRef(null)
@@ -51,7 +53,7 @@ export default function Composer({ onSend, disabled, limitReached }) {
         continue
       }
       if (f.size > MAX_BYTES) {
-        setFileError(`"${f.name}" is over 4 MB.`)
+        setFileError(`"${f.name}" is over 10 MB.`)
         continue
       }
       next.push(f)
@@ -80,23 +82,25 @@ export default function Composer({ onSend, disabled, limitReached }) {
     })
   }
 
-  const readAsBase64 = (file) =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = () =>
-        resolve({
-          name: file.name,
-          media_type: file.type === 'image/jpg' ? 'image/jpeg' : file.type,
-          data: reader.result.split(',')[1],
-        })
-      reader.onerror = reject
-      reader.readAsDataURL(file)
-    })
-
   const send = async () => {
     const text = input.trim()
-    if ((!text && files.length === 0) || disabled || limitReached) return
-    const attachments = await Promise.all(files.map(readAsBase64))
+    if ((!text && files.length === 0) || disabled || uploading || limitReached) return
+
+    let attachments = []
+    if (files.length > 0) {
+      // Files go to Cloudinary first; the chat message only carries their URLs.
+      setUploading(true)
+      setFileError('')
+      try {
+        attachments = await Promise.all(files.map((f) => uploadAttachment(f)))
+      } catch {
+        setFileError('Upload failed. Please check your connection and try again.')
+        setUploading(false)
+        return
+      }
+      setUploading(false)
+    }
+
     setInput('')
     setFiles([])
     setFileError('')
@@ -183,12 +187,16 @@ export default function Composer({ onSend, disabled, limitReached }) {
           <button
             className="send-btn"
             onClick={send}
-            disabled={disabled || limitReached || (!input.trim() && files.length === 0)}
-            aria-label="Send message"
+            disabled={disabled || uploading || limitReached || (!input.trim() && files.length === 0)}
+            aria-label={uploading ? 'Uploading files' : 'Send message'}
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M3 11.5L21 3L13.5 21L11 13L3 11.5Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
-            </svg>
+            {uploading ? (
+              <span className="spinner" />
+            ) : (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 11.5L21 3L13.5 21L11 13L3 11.5Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+              </svg>
+            )}
           </button>
         </div>
       </div>
