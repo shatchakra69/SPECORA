@@ -1,5 +1,5 @@
 // Chat history lives in localStorage, namespaced per logged-in email.
-// Attachment binary data is never persisted (too big), only name + type.
+// Attachments persist as Cloudinary URLs; raw base64 data is never stored.
 
 const key = (email) => `blc_chats_${email}`
 
@@ -19,7 +19,13 @@ export function saveConversations(email, conversations) {
       content: m.content,
       ...(m.error ? { error: true } : {}),
       ...(m.attachments
-        ? { attachments: m.attachments.map(({ name, media_type }) => ({ name, media_type })) }
+        ? {
+            attachments: m.attachments.map(({ name, media_type, url }) => ({
+              name,
+              media_type,
+              ...(url ? { url } : {}),
+            })),
+          }
         : {}),
     })),
   }))

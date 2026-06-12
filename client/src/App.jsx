@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { getSession, clearSession } from './api'
+import { supabase } from './supabase'
 import {
   loadConversations, saveConversations, newConversation, titleFrom,
   loadProfile, saveProfile,
@@ -10,7 +10,8 @@ import ChatArea from './components/ChatArea'
 import SettingsModal from './components/SettingsModal'
 
 export default function App() {
-  const [user, setUser] = useState(() => getSession())
+  const [user, setUser] = useState(null)
+  const [authReady, setAuthReady] = useState(false)
   const [conversations, setConversations] = useState([])
   const [activeId, setActiveId] = useState(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -19,14 +20,35 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false)
 
   useEffect(() => {
+    const toUser = (session) =>
+      session?.user?.email ? { email: session.user.email } : null
+
+    supabase.auth.getSession().then(({ data }) => {
+      setUser(toUser(data.session))
+      setAuthReady(true)
+    })
+    // Fires on login, logout, the Google OAuth redirect, and token refreshes.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => setUser((prev) => {
+        const next = toUser(session)
+        return prev?.email === next?.email ? prev : next
+      }),
+    )
+    return () => subscription.unsubscribe()
+  }, [])
+
+  useEffect(() => {
     if (!user) return
     setConversations(loadConversations(user.email))
     setProfile(loadProfile(user.email))
     setActiveId(null)
   }, [user?.email])
 
+  if (!authReady) {
+    return null
+  }
   if (!user) {
-    return <AuthScreen onAuthed={setUser} />
+    return <AuthScreen />
   }
 
   const persist = (next) => {
@@ -79,7 +101,7 @@ export default function App() {
   }
 
   const handleLogout = () => {
-    clearSession()
+    supabase.auth.signOut()
     setUser(null)
     setConversations([])
     setProfile({})
