@@ -1,12 +1,14 @@
 import axios from 'axios'
+import { supabase } from './supabase'
 
 const BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001'
 
 const api = axios.create({ baseURL: BASE })
 
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('blc_token')
-  if (token) config.headers.Authorization = `Bearer ${token}`
+api.interceptors.request.use(async (config) => {
+  // Supabase keeps the session fresh; always send the current access token.
+  const { data: { session } } = await supabase.auth.getSession()
+  if (session) config.headers.Authorization = `Bearer ${session.access_token}`
   return config
 })
 
@@ -27,29 +29,36 @@ async function withRetry(fn, onWake) {
   }
 }
 
-export const signup = (email, password, onWake) =>
-  withRetry(() => api.post('/api/auth/signup', { email, password }, { timeout: 30000 }), onWake)
-
-export const login = (email, password, onWake) =>
-  withRetry(() => api.post('/api/auth/login', { email, password }, { timeout: 30000 }), onWake)
-
 export const sendChat = (messages, mode, userName, onWake) =>
   withRetry(
     () => api.post('/api/chat', { messages, mode, userName }, { timeout: 90000 }),
     onWake,
   )
 
-export const getSession = () => {
-  const token = localStorage.getItem('blc_token')
-  if (!token) return null
-  try {
-    const payload = JSON.parse(atob(token.split('.')[1]))
-    if (payload.exp * 1000 < Date.now()) return null
-    return { email: payload.email }
-  } catch {
-    return null
+// Uploads go straight to Cloudinary; our server only signs the request so the
+// API secret never reaches the browser and big files never transit the dyno.
+export async function uploadAttachment(file, onWake) {
+  const sig = await withRetry(
+    () => api.post('/api/uploads/sign', {}, { timeout: 30000 }),
+    onWake,
+  )
+  const { cloudName, apiKey, folder, timestamp, signature } = sig.data
+
+  const form = new FormData()
+  form.append('file', file)
+  form.append('api_key', apiKey)
+  form.append('folder', folder)
+  form.append('timestamp', timestamp)
+  form.append('signature', signature)
+
+  const res = await axios.post(
+    `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`,
+    form,
+    { timeout: 60000 },
+  )
+  return {
+    name: file.name,
+    media_type: file.type === 'image/jpg' ? 'image/jpeg' : file.type,
+    url: res.data.secure_url,
   }
 }
-
-export const storeSession = (token) => localStorage.setItem('blc_token', token)
-export const clearSession = () => localStorage.removeItem('blc_token')

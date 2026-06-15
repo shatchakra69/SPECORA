@@ -42,11 +42,21 @@ export default function Message({ msg, avatarSrc }) {
       <div className={`bubble ${isUser ? 'bubble--user' : 'bubble--ai'} ${msg.error ? 'bubble--error' : ''}`}>
         {msg.attachments?.length > 0 && (
           <div className="bubble-attachments">
-            {msg.attachments.map((a, i) => (
-              <span key={i} className="attach-chip attach-chip--sent">
-                {a.media_type === 'application/pdf' ? '📄' : '🖼️'} {a.name}
-              </span>
-            ))}
+            {msg.attachments.map((a, i) =>
+              a.url && a.media_type?.startsWith('image/') ? (
+                <a key={i} href={a.url} target="_blank" rel="noreferrer" className="attach-thumb" title={a.name}>
+                  <img src={a.url} alt={a.name} loading="lazy" />
+                </a>
+              ) : a.url ? (
+                <a key={i} href={a.url} target="_blank" rel="noreferrer" className="attach-chip attach-chip--sent">
+                  📄 {a.name}
+                </a>
+              ) : (
+                <span key={i} className="attach-chip attach-chip--sent">
+                  {a.media_type === 'application/pdf' ? '📄' : '🖼️'} {a.name}
+                </span>
+              ),
+            )}
           </div>
         )}
         {isUser ? (
