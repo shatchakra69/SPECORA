@@ -2,7 +2,7 @@
 
 **Spec your AI, your way. Gain your aura.**
 
-SPECORA is an AI chat app I built for anyone who wants a smarter, more personal assistant than a one-size-fits-all chatbot. It ships with six focused modes (Chat, Homework, Research, Humanizer, Code, and Creative), so the AI adapts to whatever I'm working on. I can sign in, keep my chat history, and drop in images or PDFs for the AI to read and reason over. Replies come back in a natural, human tone, never robotic. It's fast, minimal, and works on any device.
+SPECORA is an AI chat bot, I built for anyone who wants a smarter, more personal assistant than a one-size-fits-all chatbot. It ships with six focused modes (Chat, Homework, Research, Humanizer, Code, and Creative), so the AI adapts to whatever I'm working on. I can sign in, keep my chat history, and drop in images or PDFs for the AI to read and reason over. Replies come back in a natural, human tone, never robotic. It's fast, minimal, and works on any device.
 
 **Check the live demo here: [specora.live](https://specora.live)**
 
