@@ -38,5 +38,6 @@ SPECORA is an AI chat bot, I built for anyone who wants a smarter, more personal
 
 SPECORA is designed and built solely by **Shat Chakra Pawar Amgothu**.
 
+For Any suggestions or Improvements, Please contact: 
 - Email: [shatchakra69@gmail.com](mailto:shatchakra69@gmail.com)
 - [LinkedIn](https://www.linkedin.com/in/shat-chakra-pawar-amgothu-a6921a2b4/)
