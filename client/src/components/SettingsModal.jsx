@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import PrivacyModal from './PrivacyModal'
 
 // Resize a picked image to a small square so it fits comfortably in localStorage.
 const fileToAvatar = (file) =>
@@ -40,6 +41,7 @@ export default function SettingsModal({ user, profile, onSave, onClose }) {
     avatar: profile.avatar ?? '',
   })
   const fileRef = useRef(null)
+  const [showPrivacy, setShowPrivacy] = useState(false)
 
   const set = (key) => (e) => setForm({ ...form, [key]: e.target.value })
 
@@ -71,6 +73,7 @@ export default function SettingsModal({ user, profile, onSave, onClose }) {
   const initial = (form.preferredName || form.firstName || user.email)[0].toUpperCase()
 
   return (
+    <>
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-card" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
@@ -155,6 +158,12 @@ export default function SettingsModal({ user, profile, onSave, onClose }) {
             personalize replies; the rest stays private to you.
           </p>
 
+          <p className="settings-legal">
+            <button type="button" className="link link--muted" onClick={() => setShowPrivacy(true)}>
+              Privacy Policy
+            </button>
+          </p>
+
           <div className="modal-actions">
             <button type="button" className="btn-ghost" onClick={onClose}>Cancel</button>
             <button type="submit" className="btn-primary">Save changes</button>
@@ -162,5 +171,7 @@ export default function SettingsModal({ user, profile, onSave, onClose }) {
         </form>
       </div>
     </div>
+    {showPrivacy && <PrivacyModal onClose={() => setShowPrivacy(false)} />}
+    </>
   )
 }

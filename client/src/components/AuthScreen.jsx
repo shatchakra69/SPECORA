@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '../supabase'
 import Logo from './Logo'
+import PrivacyModal from './PrivacyModal'
 
 // Supabase error messages are technical; translate the common ones.
 const friendly = (message = '') => {
@@ -14,6 +15,7 @@ const friendly = (message = '') => {
 
 export default function AuthScreen() {
   const [tab, setTab] = useState('login')
+  const [showPrivacy, setShowPrivacy] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPw, setShowPw] = useState(false)
@@ -163,6 +165,11 @@ export default function AuthScreen() {
       <p className="auth-features">
         Chat · Homework · Research · Humanizer · Code · Creative
       </p>
+      <p className="auth-legal">
+        <button className="link link--muted" onClick={() => setShowPrivacy(true)}>Privacy Policy</button>
+      </p>
+
+      {showPrivacy && <PrivacyModal onClose={() => setShowPrivacy(false)} />}
     </div>
   )
 }
