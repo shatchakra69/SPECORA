@@ -17,9 +17,20 @@ export default function Composer({ onSend, disabled, limitReached }) {
   const [uploading, setUploading] = useState(false)
   const [showEmoji, setShowEmoji] = useState(false)
   const [fileError, setFileError] = useState('')
+  const [toast, setToast] = useState('')
   const taRef = useRef(null)
   const fileRef = useRef(null)
   const emojiRef = useRef(null)
+  const toastTimer = useRef(null)
+
+  // Small confirmation that fades out on its own.
+  const flashToast = (msg) => {
+    setToast(msg)
+    clearTimeout(toastTimer.current)
+    toastTimer.current = setTimeout(() => setToast(''), 2500)
+  }
+
+  useEffect(() => () => clearTimeout(toastTimer.current), [])
 
   useEffect(() => {
     const ta = taRef.current
@@ -87,7 +98,8 @@ export default function Composer({ onSend, disabled, limitReached }) {
     if ((!text && files.length === 0) || disabled || uploading || limitReached) return
 
     let attachments = []
-    if (files.length > 0) {
+    const fileCount = files.length
+    if (fileCount > 0) {
       // Files go to Cloudinary first; the chat message only carries their URLs.
       setUploading(true)
       setFileError('')
@@ -99,6 +111,7 @@ export default function Composer({ onSend, disabled, limitReached }) {
         return
       }
       setUploading(false)
+      flashToast(fileCount > 1 ? 'Files uploaded' : 'File uploaded')
     }
 
     setInput('')
@@ -116,6 +129,12 @@ export default function Composer({ onSend, disabled, limitReached }) {
 
   return (
     <footer className="composer">
+      {toast && (
+        <div className="upload-toast" role="status">
+          <span className="upload-toast-check">✓</span> {toast}
+        </div>
+      )}
+
       {limitReached && (
         <div className="limit-banner">
           This chat reached its 15-message limit. Start a new chat to keep going.

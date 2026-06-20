@@ -873,6 +873,35 @@ a.attach-chip--sent:hover { background: rgba(0, 0, 0, 0.16); }
 
 .attach-error { margin: 0 6px 6px; font-size: 13px; color: #fca5a5; }
 
+/* Auto-fading "File uploaded" confirmation */
+.upload-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 104px;
+  transform: translateX(-50%);
+  z-index: 60;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 16px;
+  background: #17181b;
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  color: #fff;
+  font-size: 13.5px;
+  font-weight: 600;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+  animation: uploadToast 2.5s ease forwards;
+}
+.upload-toast-check { color: #4ade80; font-weight: 800; }
+@keyframes uploadToast {
+  0% { opacity: 0; transform: translateX(-50%) translateY(8px); }
+  10% { opacity: 1; transform: translateX(-50%) translateY(0); }
+  82% { opacity: 1; transform: translateX(-50%) translateY(0); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-4px); }
+}
+
 /* Emoji picker. Solid background on purpose: translucent glass + backdrop blur
    fails inside another blurred panel and lets the chat text bleed through. */
 .emoji-wrap { position: relative; }
