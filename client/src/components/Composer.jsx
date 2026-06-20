@@ -52,6 +52,7 @@ export default function Composer({ onSend, disabled, limitReached }) {
     setFileError('')
     const incoming = Array.from(list)
     const next = [...files]
+    let added = 0
     for (const f of incoming) {
       if (next.length >= MAX_FILES) {
         setFileError(`Max ${MAX_FILES} files per message.`)
@@ -68,8 +69,10 @@ export default function Composer({ onSend, disabled, limitReached }) {
         continue
       }
       next.push(f)
+      added++
     }
     setFiles(next)
+    if (added > 0) flashToast(added > 1 ? 'Files added' : 'File added')
   }
 
   const handlePaste = (e) => {
