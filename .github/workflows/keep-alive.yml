@@ -1,0 +1,19 @@
+name: Keep backend awake
+
+# Render's free tier sleeps the server after ~15 min of inactivity, which causes
+# a slow cold start on the next request. This pings the health endpoint on a
+# schedule so the server stays warm during the day.
+
+on:
+  schedule:
+    - cron: "*/10 * * * *" # every 10 minutes
+  workflow_dispatch: {} # allow manual runs from the Actions tab
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping health endpoint
+        run: |
+          curl -sS -m 60 -o /dev/null -w "health check: HTTP %{http_code} in %{time_total}s\n" \
+            https://blc-server-yp7x.onrender.com/api/health
